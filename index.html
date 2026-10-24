@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#fireTimeline {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  height: 780px;
+  margin: auto;
+  overflow: hidden;
+  background: transparent;
+  color: #f4eee9;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  isolation: isolate;
+}
+
+/* 火焰动画层 */
+
+#flameCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 时间轴主体 */
+
+.timeline {
+  position: absolute;
+  left: 8%;
+  top: 16px;
+  width: 43%;
+  z-index: 2;
+}
+
+/* 顶部火焰按钮 */
+
+.fireButton {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 175, 112, .65);
+  background: radial-gradient(
+    circle,
+    rgba(232, 96, 42, .20),
+    rgba(232, 96, 42, .03)
+  );
+  box-shadow: 0 0 25px rgba(255, 105, 46, .28);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform .3s, box-shadow .3s;
+}
+
+.fireButton:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 34px rgba(255, 115, 50, .55);
+}
+
+.fireButton svg {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 0 7px rgba(255, 117, 50, .75));
+}
+
+.hint {
+  font-size: 12px;
+  color: #f0b38b;
+  letter-spacing: 2px;
+  margin: 10px 0 22px 18px;
+}
+
+/* 时间轴线条 */
+
+.track {
+  position: relative;
+  margin-left: 27px;
+  padding-left: 28px;
+}
+
+.track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 16px;
+  width: 1px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.progress {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 3px;
+  height: 0;
+  border-radius: 3px;
+  background: linear-gradient(#ffcb91, #ec6035);
+  box-shadow: 0 0 12px rgba(255, 111, 49, .75);
+}
+
+/* 时间节点 */
+
+.entry {
+  position: relative;
+  height: 76px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .55s ease, transform .55s ease;
+}
+
+.entry.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dot {
+  position: absolute;
+  left: -34px;
+  top: 6px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ffad73;
+  border: 2px solid #17263a;
+  box-shadow: 0 0 12px rgba(255, 119, 57, .8);
+}
+
+.date {
+  font-size: 11px;
+  color: #b9c9d6;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.time {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffc295;
+  font-variant-numeric: tabular-nums;
+}
+
+.event {
+  margin-left: 11px;
+  font-size: 13px;
+  color: #f4eee9;
+}
+
+.duration {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #f0b18a;
+}
+
+@media (max-width: 500px) {
+  .timeline {
+    left: 5%;
+    width: 53%;
+  }
+
+  .time {
+    font-size: 17px;
+  }
+
+  .event {
+    font-size: 11px;
+    margin-left: 5px;
+  }
+
+  .date {
+    font-size: 10px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="fireTimeline">
+
+  <canvas id="flameCanvas"></canvas>
+
+  <div class="timeline">
+
+    <button
+      class="fireButton"
+      id="startFire"
+      type="button"
+      aria-label="播放火灾时间轴"
+    >
+      <svg viewBox="0 0 48 48">
+        <defs>
+          <linearGradient id="outerFlame"
+            x1="0" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stop-color="#ffe3a5"/>
+            <stop offset="45%" stop-color="#ff8c3e"/>
+            <stop offset="100%" stop-color="#d83d25"/>
+          </linearGradient>
+
+          <linearGradient id="innerFlame"
+            x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fff5ce"/>
+            <stop offset="100%" stop-color="#ffbc65"/>
+          </linearGradient>
+        </defs>
+
+        <path
+          d="M24 43
+             C12 43 7 35 9 25
+             C10 19 15 13 18 8
+             C18 15 21 18 23 19
+             C25 14 28 9 27 2
+             C36 11 41 20 40 28
+             C39 37 33 43 24 43Z"
+          fill="url(#outerFlame)"
+        />
+
+        <path
+          d="M24 41
+             C18 41 14 37 15 31
+             C16 27 20 23 22 19
+             C22 24 24 26 25 27
+             C27 23 29 21 29 17
+             C34 23 36 28 35 32
+             C34 38 30 41 24 41Z"
+          fill="url(#innerFlame)"
+        />
+      </svg>
+    </button>
+
+    <div class="hint">点击</div>
+
+    <div class="track" id="track">
+
+      <div class="progress" id="progress"></div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">2025 / 11 / 26</div>
+        <span class="time">14:51</span>
+        <span class="event">消防接报</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">11月26日</div>
+        <span class="time">14:56</span>
+        <span class="event">消防到场</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">11月26日</div>
+        <span class="time">15:02</span>
+        <span class="event">三级火警</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">11月26日</div>
+        <span class="time">15:34</span>
+        <span class="event">四级火警</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">11月26日</div>
+        <span class="time">18:22</span>
+        <span class="event">五级火警</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">2025 / 11 / 27</div>
+        <span class="time">21:31</span>
+        <span class="event">火势受包围</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">2025 / 11 / 28</div>
+        <span class="time">03:15</span>
+        <span class="event">火势受控制</span>
+      </div>
+
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="date">11月28日</div>
+        <span class="time">10:18</span>
+        <span class="event">大致扑灭</span>
+        <div class="duration">历时43小时27分钟</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+
+  const root = document.getElementById("fireTimeline");
+  const canvas = document.getElementById("flameCanvas");
+  const ctx = canvas.getContext("2d");
+  const button = document.getElementById("startFire");
+  const entries = [...root.querySelectorAll(".entry")];
+  const progress = document.getElementById("progress");
+  const track = document.getElementById("track");
+
+  let W = 0;
+  let H = 0;
+  let particles = [];
+  let timers = [];
+  let frameId = 0;
+  let lastTime = 0;
+  let running = false;
+  let allNodesShown = false;
+
+  function resize() {
+    W = root.clientWidth;
+    H = root.clientHeight;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  function random(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function getSource(index) {
+    const dot = entries[index].querySelector(".dot");
+    const a = dot.getBoundingClientRect();
+    const b = root.getBoundingClientRect();
+
+    return {
+      x: a.right - b.left + 8,
+      y: a.top + a.height / 2 - b.top
+    };
+  }
+
+  function getTarget() {
+    return {
+      x: W * 0.81,
+      y: H * 0.51
+    };
+  }
+
+  /* 单朵飞行火焰 */
+
+  class Flame {
+    constructor(source) {
+      const target = getTarget();
+
+      this.startX = source.x;
+      this.startY = source.y + random(-5, 5);
+
+      this.targetX = target.x + random(-25, 25);
+      this.targetY = target.y + random(-30, 30);
+
+      this.age = 0;
+
+      /* 每朵火焰飞行速度不同 */
+      this.duration = random(1.2, 2.6);
+
+      this.size = random(5, 11);
+      this.bend = random(12, 40);
+      this.phase = random(0, Math.PI * 2);
+      this.rotation = random(-0.4, 0.4);
+    }
+
+    update(dt) {
+      this.age += dt;
+      return this.age < this.duration;
+    }
+
+    draw() {
+      const p = Math.min(this.age / this.duration, 1);
+      const ease = 1 - Math.pow(1 - p, 2);
+
+      const x =
+        this.startX +
+        (this.targetX - this.startX) * ease;
+
+      const y =
+        this.startY +
+        (this.targetY - this.startY) * ease -
+        Math.sin(p * Math.PI) * this.bend +
+        Math.sin(p * 12 + this.phase) * 3;
+
+      const alpha = Math.max(
+        0,
+        Math.min(1, p * 9, (1 - p) * 5)
+      );
+
+      const s = this.size * (1 - p * 0.3);
+
+      ctx.save();
+
+      ctx.translate(x, y);
+      ctx.rotate(
+        this.rotation + Math.sin(p * 9) * 0.12
+      );
+
+      ctx.globalAlpha = alpha;
+
+      /* 火焰外层 */
+
+      ctx.shadowColor = "#ff7035";
+      ctx.shadowBlur = 14;
+
+      const gradient = ctx.createLinearGradient(
+        0, -s * 1.6, 0, s
+      );
+
+      gradient.addColorStop(0, "#ffe8aa");
+      gradient.addColorStop(0.4, "#ffae54");
+      gradient.addColorStop(1, "#e74d28");
+
+      ctx.fillStyle = gradient;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 1.6);
+
+      ctx.bezierCurveTo(
+        s * 0.5, -s * 0.5,
+        s * 0.85, s * 0.3,
+        0, s
+      );
+
+      ctx.bezierCurveTo(
+        -s * 0.85, s * 0.3,
+        -s * 0.5, -s * 0.5,
+        0, -s * 1.6
+      );
+
+      ctx.fill();
+
+      /* 火焰内芯 */
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#ffedb5";
+
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.5);
+
+      ctx.quadraticCurveTo(
+        s * 0.3, s * 0.2,
+        0, s * 0.65
+      );
+
+      ctx.quadraticCurveTo(
+        -s * 0.3, s * 0.2,
+        0, -s * 0.5
+      );
+
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  /* 每个节点只产生5朵火焰 */
+
+  function spawnFlames(index) {
+    const source = getSource(index);
+
+    for (let i = 0; i < 5; i++) {
+      particles.push(new Flame(source));
+    }
+  }
+
+  /* 动画循环 */
+
+  function animate(now) {
+    if (!running) return;
+
+    const dt = Math.min(
+      (now - lastTime) / 1000 || 0.016,
+      0.05
+    );
+
+    lastTime = now;
+
+    ctx.clearRect(0, 0, W, H);
+
+    particles = particles.filter(flame => {
+      if (flame.update(dt)) {
+        flame.draw();
+        return true;
+      }
+      return false;
+    });
+
+    /* 最后节点出现且所有火焰消散后停止 */
+
+    if (allNodesShown && particles.length === 0) {
+      running = false;
+      frameId = 0;
+      return;
+    }
+
+    frameId = requestAnimationFrame(animate);
+  }
+
+  /* 点击播放或重播 */
+
+  function startAnimation() {
+
+    timers.forEach(clearTimeout);
+    timers = [];
+
+    cancelAnimationFrame(frameId);
+
+    running = false;
+    allNodesShown = false;
+    particles = [];
+
+    ctx.clearRect(0, 0, W, H);
+
+    entries.forEach(entry => {
+      entry.classList.remove("visible");
+    });
+
+    progress.style.transition = "none";
+    progress.style.height = "0px";
+
+    void progress.offsetHeight;
+
+    const interval = 820;
+    const totalTime = (entries.length - 1) * interval;
+
+    progress.style.transition =
+      `height ${totalTime}ms linear`;
+
+    progress.style.height =
+      (track.offsetHeight - 16) + "px";
+
+    running = true;
+    lastTime = performance.now();
+
+    frameId = requestAnimationFrame(animate);
+
+    entries.forEach((entry, index) => {
+
+      const timer = setTimeout(() => {
+
+        entry.classList.add("visible");
+
+        spawnFlames(index);
+
+        if (index === entries.length - 1) {
+          allNodesShown = true;
+        }
+
+      }, index * interval);
+
+      timers.push(timer);
+    });
+  }
+
+  button.addEventListener("click", startAnimation);
+
+  /* 页面隐藏时暂停绘制 */
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      cancelAnimationFrame(frameId);
+    } else if (running) {
+      lastTime = performance.now();
+      frameId = requestAnimationFrame(animate);
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
