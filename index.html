@@ -30,8 +30,7 @@ html, body {
   isolation: isolate;
 }
 
-/* 火焰动画层 */
-
+/* 火焰动画画布 */
 #flameCanvas {
   position: absolute;
   inset: 0;
@@ -42,7 +41,6 @@ html, body {
 }
 
 /* 时间轴主体 */
-
 .timeline {
   position: absolute;
   left: 8%;
@@ -52,7 +50,6 @@ html, body {
 }
 
 /* 顶部火焰按钮 */
-
 .fireButton {
   width: 60px;
   height: 60px;
@@ -91,7 +88,6 @@ html, body {
 }
 
 /* 时间轴线条 */
-
 .track {
   position: relative;
   margin-left: 27px;
@@ -120,7 +116,6 @@ html, body {
 }
 
 /* 时间节点 */
-
 .entry {
   position: relative;
   height: 76px;
@@ -365,32 +360,36 @@ html, body {
     };
   }
 
+  /* 火焰飞向画面右侧更远的位置 */
   function getTarget() {
     return {
-      x: W * 0.81,
+      x: W * 0.93,
       y: H * 0.51
     };
   }
 
   /* 单朵飞行火焰 */
-
   class Flame {
     constructor(source) {
       const target = getTarget();
 
       this.startX = source.x;
-      this.startY = source.y + random(-5, 5);
+      this.startY = source.y + random(-6, 6);
 
-      this.targetX = target.x + random(-25, 25);
-      this.targetY = target.y + random(-30, 30);
+      this.targetX = target.x + random(-35, 35);
+      this.targetY = target.y + random(-55, 55);
 
       this.age = 0;
 
-      /* 每朵火焰飞行速度不同 */
-      this.duration = random(1.2, 2.6);
+      /* 每朵火焰的速度不同 */
+      this.duration = random(1.4, 3.0);
 
-      this.size = random(5, 11);
-      this.bend = random(12, 40);
+      /* 火焰大小 */
+      this.size = random(6, 12);
+
+      /* 飞行弧度 */
+      this.bend = random(20, 65);
+
       this.phase = random(0, Math.PI * 2);
       this.rotation = random(-0.4, 0.4);
     }
@@ -431,17 +430,16 @@ html, body {
       ctx.globalAlpha = alpha;
 
       /* 火焰外层 */
-
       ctx.shadowColor = "#ff7035";
-      ctx.shadowBlur = 14;
+      ctx.shadowBlur = 15;
 
       const gradient = ctx.createLinearGradient(
         0, -s * 1.6, 0, s
       );
 
-      gradient.addColorStop(0, "#ffe8aa");
-      gradient.addColorStop(0.4, "#ffae54");
-      gradient.addColorStop(1, "#e74d28");
+      gradient.addColorStop(0, "#ffecb3");
+      gradient.addColorStop(0.4, "#ffad53");
+      gradient.addColorStop(1, "#e64e29");
 
       ctx.fillStyle = gradient;
 
@@ -463,9 +461,8 @@ html, body {
       ctx.fill();
 
       /* 火焰内芯 */
-
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "#ffedb5";
+      ctx.fillStyle = "#ffefbb";
 
       ctx.beginPath();
       ctx.moveTo(0, -s * 0.5);
@@ -486,18 +483,16 @@ html, body {
     }
   }
 
-  /* 每个节点只产生5朵火焰 */
-
+  /* 每个节点产生8朵火焰 */
   function spawnFlames(index) {
     const source = getSource(index);
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       particles.push(new Flame(source));
     }
   }
 
   /* 动画循环 */
-
   function animate(now) {
     if (!running) return;
 
@@ -518,8 +513,7 @@ html, body {
       return false;
     });
 
-    /* 最后节点出现且所有火焰消散后停止 */
-
+    /* 最后一个节点出现且火焰消散后停止 */
     if (allNodesShown && particles.length === 0) {
       running = false;
       frameId = 0;
@@ -529,8 +523,7 @@ html, body {
     frameId = requestAnimationFrame(animate);
   }
 
-  /* 点击播放或重播 */
-
+  /* 点击播放或重新播放 */
   function startAnimation() {
 
     timers.forEach(clearTimeout);
@@ -588,7 +581,6 @@ html, body {
   button.addEventListener("click", startAnimation);
 
   /* 页面隐藏时暂停绘制 */
-
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       cancelAnimationFrame(frameId);
